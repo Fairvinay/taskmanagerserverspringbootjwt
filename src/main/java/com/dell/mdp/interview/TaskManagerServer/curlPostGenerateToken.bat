@@ -1,0 +1,1 @@
+curl -u admin:adminpassword -X POST http://localhost:8080/auth/generateToken -d "{\"username\": \"tejas\", \"password\": \"123\"}" -H "Content-Type: application/json"

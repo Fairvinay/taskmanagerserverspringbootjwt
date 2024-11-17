@@ -1,0 +1,120 @@
+package com.dell.mdp.interview.TaskManagerServer;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityConfiguration;
+import org.springframework.security.core.userdetails.User;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.provisioning.InMemoryUserDetailsManager;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.servlet.config.annotation.CorsRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;/** Author
+ *  @author vvanvekar@gmail.com
+ 
+ * Security configuration class that sets up basic authentication for the API.
+ * Ensures that all API endpoints are secured and require authentication.
+ * 
+  */
+@Configuration
+@EnableWebSecurity
+public class SecurityConfig implements WebMvcConfigurer {
+	@Autowired
+	  PasswordEncoder passwordEncoder;
+	 private final JwtUtil jwtUtil;
+    
+	    public SecurityConfig(JwtUtil jwtUtil) {
+	        this.jwtUtil = jwtUtil;
+	    }
+	
+	
+	 /**
+     * Configures HTTP security for the application.
+     * 
+     * @param http the HttpSecurity object
+     * @return the configured SecurityFilterChain bean
+     */
+     @Bean
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    		System.out.println("securityFilterChain  " );
+        http .
+        
+        	addFilterBefore(new JwtAuthenticationFilter(jwtUtil), CustomForCookiePasswordAuthenticationFilter.class)
+
+            .authorizeRequests()
+                       // Allow all headers
+           /*    .requestMatchers(HttpMethod.GET, "/api/tasks/**").hasRole("USER")  // Only allow GET for USER role
+                .requestMatchers(HttpMethod.POST, "/api/tasks").hasRole("ADMIN")  // Only allow POST for ADMIN role
+                .requestMatchers(HttpMethod.PUT, "/api/tasks/**").hasRole("ADMIN")  // Only allow PUT for ADMIN role
+                .requestMatchers(HttpMethod.DELETE, "/api/tasks/**").hasRole("ADMIN")  // Only allow DELETE for ADMIN role
+                */.anyRequest()
+                //.httpBasic()  // Enable basic HTTP authentication
+                
+               // .csrf().disable()
+                .authenticated()  // Require authentication for other requests
+                
+                ;
+        		//.and()
+                
+              /*   .anonymous() // All other requests must be authenticated
+           .and()*/
+            
+            // Disable CSRF for simplicity (not recommended in production)
+        
+        return http.build();
+    } 
+ 
+    protected void configure(HttpSecurity http) throws Exception {
+    	System.out.println("configure  " );
+        http.cors().and()
+            .csrf().disable()  // Disable CSRF if you're dealing with APIs
+            .authorizeRequests()
+            .requestMatchers(HttpMethod.GET, "/api/**").permitAll() // Example: Allow GET requests to /api/**
+            .anyRequest().authenticated();  // Require authentication for all other requests
+    }
+    @Override
+    public void addCorsMappings(CorsRegistry registry) {
+    	System.out.println("addCorsMappings  " );
+        registry.addMapping("/api/**")  // Allow CORS for all API routes
+            .allowedOrigins("http://localhost:4200")  // Allow requests from Angular app running on localhost:4200
+            .allowedMethods("GET", "POST", "PUT", "DELETE")  // Allow specific HTTP methods
+            .allowedHeaders("*")  // Allow all headers
+            .allowCredentials(true);  // Allow credentials (cookies, HTTP authentication)
+    }
+ 
+    /**
+     * Creates an in-memory user details manager with user roles.
+     * 
+     * @return the InMemoryUserDetailsManager bean
+     */
+    @Bean
+    public UserDetailsService userDetailsService() {
+        var user = User.withUsername("user")
+                .password(passwordEncoder.encode("password"))
+                .roles("USER")
+                .build();
+        
+        var admin = User.withUsername("admin")
+                .password(passwordEncoder.encode("adminpassword"))
+                .roles("ADMIN")
+                .build();
+        
+        return new InMemoryUserDetailsManager(user, admin);  // In-memory authentication
+    }
+
+    /**
+     * Password encoder to encode user passwords.
+     * 
+     * @return the PasswordEncoder bean
+     */
+   /* @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();  // Use BCrypt for password encoding
+    }*/
+}
